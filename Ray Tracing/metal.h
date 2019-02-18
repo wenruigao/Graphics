@@ -10,7 +10,7 @@ public:
   virtual bool scatter(const ray &r_in, const vec3 &point, const vec3 &normal, vec3 &attenuation, ray &scattered) const
   {
     vec3 reflected = reflect(unit_vector(r_in.direction()), normal);
-    scattered = ray(point, reflected + fuzz * random_unit_vector());
+    scattered = ray(point, reflected + fuzz * random_in_unit_sphere());
     attenuation = albedo;
     return dot(scattered.direction(), normal) > 0;
   }

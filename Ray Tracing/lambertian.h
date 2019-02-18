@@ -8,7 +8,7 @@ public:
   lambertian(const vec3 &albedo) : albedo(albedo) {}
   virtual bool scatter(const ray &r_in, const vec3 &point, const vec3 &normal, vec3 &attenuation, ray &scattered) const
   {
-    vec3 target = point + normal + random_unit_vector();
+    vec3 target = point + normal + random_in_unit_sphere();
     scattered = ray(point, target - point);
     attenuation = albedo;
     return true;

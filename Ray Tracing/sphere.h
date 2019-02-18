@@ -20,7 +20,7 @@ class sphere : public hitable
             if (t < tmax && t > tmin)
             {
                 hp.point = r.point_at_parameter(t);
-                hp.normal = unit_vector(hp.point - center);
+                hp.normal = (hp.point - center) / this->radius;
                 hp.material = this->material;
                 return true;
             }
@@ -29,7 +29,7 @@ class sphere : public hitable
             if (t < tmax && t > tmin)
             {
                 hp.point = r.point_at_parameter(t);
-                hp.normal = unit_vector(hp.point - center);
+                hp.normal = (hp.point - center) / this->radius;
                 hp.material = this->material;
                 return true;
             }

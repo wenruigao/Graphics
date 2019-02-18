@@ -32,6 +32,11 @@ class vec3
         return sqrtf(this->squared_length());
     }
 
+    inline vec3 operator-() const
+    {
+        return vec3(-this->e[0], -this->e[1], -this->e[2]);
+    }
+
     inline vec3 &operator+=(const vec3 &v)
     {
         this->e[0] += v[0];
@@ -63,6 +68,11 @@ inline vec3 operator-(const vec3 &v1, const vec3 &v2)
 }
 
 inline vec3 operator*(float t, const vec3 &v)
+{
+    return vec3(v[0] * t, v[1] * t, v[2] * t);
+}
+
+inline vec3 operator*(const vec3 &v, float t)
 {
     return vec3(v[0] * t, v[1] * t, v[2] * t);
 }
@@ -100,9 +110,26 @@ inline vec3 reflect(const vec3 &v, const vec3 &n)
     return v - 2 * dot(v, n) * n;
 }
 
-inline vec3 random_unit_vector()
+inline bool refract(const vec3 &v, const vec3 &n, float ni_over_nt, vec3 &refracted)
 {
-    static mt19937 gen;
+    vec3 uv = unit_vector(v);
+    float dt = dot(uv, n);
+    float discriminant = 1.0f - ni_over_nt * ni_over_nt * (1.0f - dt * dt);
+    if (discriminant > 0)
+    {
+        refracted = ni_over_nt * (uv - n * dt) - n * sqrtf(discriminant);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+inline vec3 random_in_unit_sphere()
+{
+    static random_device rd;
+    static mt19937 gen(rd());
     static uniform_real_distribution<float> dis(-1.0f, 1.0f);
 
     vec3 v;
@@ -110,6 +137,20 @@ inline vec3 random_unit_vector()
     {
         v = vec3(dis(gen), dis(gen), dis(gen));
     } while (v.squared_length() >= 1.0f);
+    return v;
+}
+
+inline vec3 random_in_unit_disk()
+{
+    static random_device rd;
+    static mt19937 gen(rd());
+    static uniform_real_distribution<float> dis(-1.0f, 1.0f);
+
+    vec3 v;
+    do
+    {
+        v = vec3(dis(gen), dis(gen), 0.0f);
+    } while (dot(v, v) >= 1.0f);
     return v;
 }
 
