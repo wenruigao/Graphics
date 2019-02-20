@@ -1,11 +1,14 @@
-BIN_FILE = a.exe
-CFLAGS = -Wall -O2
+EXAMPLE_FILES = $(wildcard *.cc)
+BIN_FILES = $(EXAMPLE_FILES:%.cc=%.exe)
+CFLAGS = -Wall -O3
 
-$(BIN_FILE): lodepng.o a.o
-	g++ $(CFLAGS) -o $(BIN_FILE) lodepng.o a.o
+all: $(BIN_FILES)
+
+%.exe: %.o lodepng.o
+	g++ $(CFLAGS) -o $@ lodepng.o $<
 
 lodepng.o: lodepng.c lodepng.h
 	g++ $(CFLAGS) -c lodepng.c -o lodepng.o
 
-a.o: main.cc *.h
-	g++ $(CFLAGS) -c main.cc -o a.o
+%.o: %.cc *.h
+	g++ $(CFLAGS) -c $< -o $@

@@ -2,6 +2,8 @@
 #define DIELECTRIC_H
 #include "material.h"
 
+namespace rt
+{
 static float schlick(float cosine, float ref_idx)
 {
     float r0 = (1.0f - ref_idx) / (1.0f + ref_idx);
@@ -54,5 +56,6 @@ class dielectric : public material
     mutable mt19937 gen;
     mutable uniform_real_distribution<float> dis;
 };
+} // namespace rt
 
 #endif

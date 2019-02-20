@@ -1,6 +1,8 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
+namespace rt
+{
 class camera
 {
 public:
@@ -31,5 +33,6 @@ private:
   vec3 u, v;
   float lens_radius;
 };
+} // namespace rt
 
 #endif

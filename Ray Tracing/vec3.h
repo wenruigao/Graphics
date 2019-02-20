@@ -5,6 +5,8 @@
 
 using namespace std;
 
+namespace rt
+{
 class vec3
 {
   public:
@@ -153,5 +155,6 @@ inline vec3 random_in_unit_disk()
     } while (dot(v, v) >= 1.0f);
     return v;
 }
+} // namespace rt
 
 #endif
