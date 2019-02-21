@@ -11,13 +11,15 @@ class rectangle : public surface
                                                                 p2(p2),
                                                                 p3(p3)
     {
-        vec3 v1 = p1 - p2;
-        vec3 v2 = p3 - p2;
-        this->normal = unit_vector(cross(v1, v2));
+        this->v1 = p1 - p2;
+        this->v2 = p3 - p2;
+        this->normal = unit_vector(cross(this->v1, this->v2));
         this->d = -dot(this->normal, p2);
+        this->u2 = dot(this->v1, this->v1);
+        this->u4 = dot(this->v2, this->v2);
     }
 
-    virtual bool hit(const ray &r, float tmin, float tmax, float &t, hitpoint &hp) const
+    virtual bool hit(const ray &r, float tmin, float tmax, float &t, hitpoint &hp, bool &front) const
     {
         float b = dot(this->normal, r.direction());
 
@@ -30,25 +32,23 @@ class rectangle : public surface
         t = a / b;
         if (t < tmax && t > tmin)
         {
-            vec3 p = r.point_at_parameter(t);
+            vec3 point = r.point_at_parameter(t);
+            vec3 v = point - this->p2;
 
-            vec3 v1 = this->p1 - this->p2;
-            vec3 v2 = this->p3 - this->p2;
-            vec3 v = p - this->p2;
-            float u1 = dot(v, v1);
-            float u2 = dot(v1, v1);
-            float u3 = dot(v, v2);
-            float u4 = dot(v2, v2);
+            float u1 = dot(v, this->v1);
+            float u3 = dot(v, this->v2);
 
-            if (0 < u1 && 0 < u3 && u1 < u2 && u3 < u4)
+            if (0 < u1 && 0 < u3 && u1 < this->u2 && u3 < this->u4)
             {
                 if (a < 0)
                 {
-                    hp = hitpoint(p, this->normal, 0);
+                    hp = hitpoint(point, this->normal, 1.0f - u1, 1.0f - u3);
+                    front = true;
                 }
                 else
                 {
-                    hp = hitpoint(p, -this->normal, 1);
+                    hp = hitpoint(point, -this->normal, 1.0f - u1, 1.0f - u3);
+                    front = false;
                 }
                 return true;
             }
@@ -58,8 +58,8 @@ class rectangle : public surface
     }
 
   private:
-    vec3 p1, p2, p3, normal;
-    float d;
+    vec3 p1, p2, p3, v1, v2, normal;
+    float d, u2, u4;
 };
 } // namespace rt
 

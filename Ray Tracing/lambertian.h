@@ -1,24 +1,25 @@
 #ifndef LAMBERTIAN_H
 #define LAMBERTIAN_H
 #include "material.h"
+#include "texture.h"
 
 namespace rt
 {
 class lambertian : public material
 {
 public:
-  lambertian(const vec3 &albedo) : albedo(albedo) {}
+  lambertian(shared_ptr<texture> albedo) : albedo(albedo) {}
 
-  virtual bool scatter(const ray &r_in, const vec3 &point, const vec3 &normal, vec3 &attenuation, ray &scattered) const
+  virtual bool scatter(const ray &r_in, const hitpoint &hp, vec3 &attenuation, ray &scattered) const
   {
-    vec3 target = point + normal + random_in_unit_sphere();
-    attenuation = albedo;
-    scattered = ray(point, target - point);
+    vec3 target = hp.point() + hp.normal() + random_in_unit_sphere();
+    attenuation = this->albedo->value(hp.u(), hp.v(), hp.point());
+    scattered = ray(hp.point(), target - hp.point());
     return true;
   }
 
 private:
-  vec3 albedo;
+  shared_ptr<texture> albedo;
 };
 } // namespace rt
 

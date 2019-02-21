@@ -4,12 +4,21 @@
 
 namespace rt
 {
+
+static void get_sphere_uv(const vec3 &p, float &u, float &v)
+{
+    float phi = atan2f(p.z(), p.x());
+    float theta = asinf(p.y());
+    u = 1.0f - (phi + M_PI) / (2.0f * M_PI);
+    v = (theta + M_PI_2) / M_PI;
+}
+
 class sphere : public surface
 {
   public:
     sphere(const vec3 &center, float radius) : center(center), radius(radius) {}
 
-    virtual bool hit(const ray &r, float tmin, float tmax, float &t, hitpoint &hp) const
+    virtual bool hit(const ray &r, float tmin, float tmax, float &t, hitpoint &hp, bool &front) const
     {
         vec3 oc = r.origin() - this->center;
         float a = dot(r.direction(), r.direction());
@@ -19,25 +28,24 @@ class sphere : public surface
 
         if (discriminant > 0)
         {
-            if (c > 0) //outside the sphere
-            {
-                t = (-b - sqrtf(discriminant)) / (a);
-            }
-            else //inside or on the sphere
-            {
-                t = (-b + sqrtf(discriminant)) / (a);
-            }
+            t = (-b + copysignf(sqrtf(discriminant), -c)) / a;
 
             if (t < tmax && t > tmin)
             {
-                auto p = r.point_at_parameter(t);
+                auto point = r.point_at_parameter(t);
+                auto normal = (point - this->center) / this->radius;
+                float u, v;
+                get_sphere_uv(normal, u, v);
+
                 if (c > 0)
                 {
-                    hp = hitpoint(p, (p - center) / this->radius, 0);
+                    hp = hitpoint(point, normal, u, v);
+                    front = true;
                 }
                 else
                 {
-                    hp = hitpoint(p, (center - p) / this->radius, 1);
+                    hp = hitpoint(point, -normal, u, v);
+                    front = false;
                 }
                 return true;
             }

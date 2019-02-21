@@ -3,8 +3,10 @@
 #include "lambertian.h"
 #include "metal.h"
 #include "dielectric.h"
+#include "constant_texture.h"
 #include "scene.h"
 #include "camera.h"
+#define LODEPNG_NO_COMPILE_CPP
 #include "lodepng.h"
 #include <memory>
 #include <algorithm>
@@ -20,7 +22,7 @@ static vec3 color(const ray &r, shared_ptr<scene> world, int depth = 0)
     {
         ray scattered;
         vec3 attenuation;
-        if (depth < 50 && m->scatter(r, hp.point(), hp.normal(), attenuation, scattered))
+        if (depth < 50 && m->scatter(r, hp, attenuation, scattered))
         {
             return attenuation * color(scattered, world, depth + 1);
         }
@@ -35,7 +37,7 @@ static vec3 color(const ray &r, shared_ptr<scene> world, int depth = 0)
 
         if (unit_direction.x() > 0.5f)
         {
-            return vec3(0.89f, 0.73f, 0.25f); //sunshine color
+            return vec3(0.89f, 0.74f, 0.25f); //sunshine color
         }
         else
         {
@@ -52,9 +54,9 @@ struct circle
 
 shared_ptr<scene> make_scene()
 {
-    vector<unsigned char> image;
+    unsigned char *image;
     unsigned width, height;
-    lodepng::decode(image, width, height, "logo.png");
+    lodepng_decode32_file(&image, &width, &height, "logo.png");
 
     random_device rd;
     mt19937 gen(rd());
@@ -85,17 +87,18 @@ shared_ptr<scene> make_scene()
 
     auto scene = make_shared<rt::scene>();
 
-    scene->add(make_shared<object>(
-        make_shared<sphere>(vec3(0.5f, 0.5f, -10.0f), 10.0f),
-        make_shared<metal>(vec3(0.5f, 0.5f, 0.5f), 0.3f)));
+    auto ct1 = make_shared<constant_texture>(vec3(0.5f, 0.5f, 0.5f));
+    auto m1 = make_shared<metal>(ct1, 0.3f);
+    scene->add(make_shared<object>(make_shared<sphere>(vec3(0.5f, 0.5f, -10.0f), 10.0f), m1));
 
     for (circle c : circles)
     {
         float color = dis(gen) * 0.5f + 0.5f;
 
-        scene->add(make_shared<object>(
-            make_shared<sphere>(vec3(c.x, c.y, c.r), c.r),
-            make_shared<metal>(vec3(color, color, color), dis(gen))));
+        auto ct = make_shared<constant_texture>(vec3(color, color, color));
+        auto m = make_shared<metal>(ct, dis(gen));
+
+        scene->add(make_shared<object>(make_shared<sphere>(vec3(c.x, c.y, c.r), c.r), m));
     }
 
     return scene;
@@ -103,6 +106,12 @@ shared_ptr<scene> make_scene()
 
 int main(int argc, char *argv[])
 {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+    const unsigned int maxrgbvhex = 0x437fffff;
+    const float maxrgbv = *reinterpret_cast<const float *>(&maxrgbvhex);
+#pragma GCC diagnostic pop
+
     random_device rd;
     mt19937 gen(rd());
     uniform_real_distribution<float> dis(0.0f, 1.0f);
@@ -142,15 +151,15 @@ int main(int argc, char *argv[])
 
             col /= static_cast<float>(ns);
 
-            *(p++) = static_cast<unsigned char>(255.99f * sqrtf(col[0]));
-            *(p++) = static_cast<unsigned char>(255.99f * sqrtf(col[1]));
-            *(p++) = static_cast<unsigned char>(255.99f * sqrtf(col[2]));
+            *(p++) = static_cast<unsigned char>(maxrgbv * sqrtf(col[0]));
+            *(p++) = static_cast<unsigned char>(maxrgbv * sqrtf(col[1]));
+            *(p++) = static_cast<unsigned char>(maxrgbv * sqrtf(col[2]));
             *(p++) = 255;
         }
         printf("\r%.0f%%", 100.0f * (ny - j - 1) / ny);
     }
 
-    lodepng::encode(argv[1], image.get(), nx, ny);
+    lodepng_encode32_file(argv[1], image.get(), nx, ny);
 
     return 0;
 }

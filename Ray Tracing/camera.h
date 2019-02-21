@@ -18,7 +18,7 @@ public:
     this->lower_left_corner = origin - half_width * focus_dist * u - half_height * focus_dist * v - focus_dist * w;
     this->horizontal = 2.0f * half_width * focus_dist * u;
     this->vertical = 2.0f * half_height * focus_dist * v;
-    this->lens_radius = aperture / 2.0f;
+    this->lens_radius = aperture / 2;
   }
 
   ray get_ray(float s, float t)

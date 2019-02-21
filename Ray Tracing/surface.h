@@ -12,7 +12,7 @@ namespace rt
 class surface
 {
 public:
-  virtual bool hit(const ray &r, float tmin, float tmax, float &t, hitpoint &hp) const = 0;
+  virtual bool hit(const ray &r, float tmin, float tmax, float &t, hitpoint &hp, bool &front) const = 0;
 };
 } // namespace rt
 

@@ -3,8 +3,12 @@
 #include "lambertian.h"
 #include "metal.h"
 #include "dielectric.h"
+#include "diffuse_light.h"
+#include "constant_texture.h"
+#include "image_texture.h"
 #include "scene.h"
 #include "camera.h"
+#define LODEPNG_NO_COMPILE_CPP
 #include "lodepng.h"
 #include <memory>
 #include <algorithm>
@@ -20,17 +24,19 @@ static vec3 color(const ray &r, shared_ptr<scene> world, int depth = 0)
     {
         ray scattered;
         vec3 attenuation;
-        if (depth < 50 && m->scatter(r, hp.point(), hp.normal(), attenuation, scattered))
+        vec3 emitted = m->emitted(hp.u(), hp.v(), hp.normal());
+        if (depth < 50 && m->scatter(r, hp, attenuation, scattered))
         {
-            return attenuation * color(scattered, world, depth + 1);
+            return emitted + attenuation * color(scattered, world, depth + 1);
         }
         else
         {
-            return vec3(0.0f, 0.0f, 0.0f);
+            return emitted;
         }
     }
     else
     {
+        return vec3(0.0f, 0.0f, 0.0f);
         vec3 unit_direction = unit_vector(r.direction());
 
         float t = 0.5f * (unit_direction.y() + 1.0f);
@@ -49,15 +55,27 @@ shared_ptr<scene> make_scene()
     mt19937 gen(rd());
     uniform_real_distribution<float> dis(0.0f, 1.0f);
 
-    auto m1 = make_shared<metal>(vec3(0.8f, 0.8f, 0.8f), 0.05f);
+    auto ct1 = make_shared<constant_texture>(vec3(0.8f, 0.8f, 0.8f));
+    auto ct2 = make_shared<constant_texture>(vec3(0.5f, 0.5f, 0.5f));
+    auto ct3 = make_shared<constant_texture>(vec3(0.89f, 0.74f, 0.25f));
+
+    unsigned char *image;
+    unsigned width, height;
+    lodepng_decode32_file(&image, &width, &height, "earthmap.png");
+    auto it = make_shared<image_texture>(image, width, height);
+
+    auto m1 = make_shared<metal>(ct1, 0.05f);
+    auto m2 = make_shared<metal>(ct1, 0.0f);
     auto d1 = make_shared<dielectric>(1.2f);
+    auto l1 = make_shared<lambertian>(it);
+    auto light = make_shared<diffuse_light>(ct3);
     auto p1 = vec3(0.0f, 0.0f, 0.0f);
-    auto p2 = vec3(1.0f, 0.0f, 0.0f);
-    auto p3 = vec3(0.0f, 1.0f, 0.0f);
-    auto p4 = vec3(0.0f, 0.0f, 1.0f);
-    auto p5 = vec3(1.0f, 1.0f, 0.0f);
-    auto p6 = vec3(1.0f, 0.0f, 1.0f);
-    auto p7 = vec3(0.0f, 1.0f, 1.0f);
+    auto p2 = vec3(0.0f, 0.0f, 1.0f);
+    auto p3 = vec3(1.0f, 0.0f, 0.0f);
+    auto p4 = vec3(0.0f, 1.0f, 0.0f);
+    auto p5 = vec3(1.0f, 0.0f, 1.0f);
+    auto p6 = vec3(0.0f, 1.0f, 1.0f);
+    auto p7 = vec3(1.0f, 1.0f, 0.0f);
 
     auto scene = make_shared<rt::scene>();
     scene->add(make_shared<object>(make_shared<rectangle>(p2, p1, p3), m1));
@@ -65,43 +83,30 @@ shared_ptr<scene> make_scene()
     scene->add(make_shared<object>(make_shared<rectangle>(p4, p1, p2), m1));
     scene->add(make_shared<object>(make_shared<rectangle>(p6, p2, p5), m1, d1));
     scene->add(make_shared<object>(make_shared<rectangle>(p5, p3, p7), m1, d1));
-    scene->add(make_shared<object>(make_shared<rectangle>(p6, p4, p7), d1));
-
-    vector<circle> circles;
-    while (circles.size() < 10)
-    {
-        circle c0{dis(gen) * 0.7f + 0.15f, dis(gen) * 0.7f + 0.15f, dis(gen) * 0.15f};
-
-        if (!all_of(circles.begin(), circles.end(), [&c0](circle c) {
-                return (c.x - c0.x) * (c.x - c0.x) + (c.y - c0.y) * (c.y - c0.y) > (c.r + c0.r) * (c.r + c0.r);
-            }))
-            continue;
-
-        circles.push_back(c0);
-
-        if (c0.r < 0.12f)
-        {
-            scene->add(make_shared<object>(
-                make_shared<sphere>(vec3(c0.x, c0.y, c0.r), c0.r),
-                make_shared<lambertian>(vec3(dis(gen), dis(gen), dis(gen)))));
-        }
-        else
-        {
-            scene->add(make_shared<object>(
-                make_shared<sphere>(vec3(c0.x, c0.y, c0.r), c0.r),
-                make_shared<metal>(vec3(dis(gen), dis(gen), dis(gen)), 0.0f)));
-        }
-    }
+    scene->add(make_shared<object>(make_shared<rectangle>(p7, p4, p6), light, d1));
 
     scene->add(make_shared<object>(
-        make_shared<rectangle>(vec3(-95.0f, 5.0f, 0.0f), vec3(5.0f, 5.0f, 0.0f), vec3(5.0f, -95.0f, 0.0f)),
-        make_shared<metal>(vec3(0.5f, 0.5f, 0.5f), 0.3f)));
+        make_shared<sphere>(vec3(0.3f, 0.3f, 0.7f), 0.25f), l1));
+
+    scene->add(make_shared<object>(
+        make_shared<sphere>(vec3(0.7f, 0.3f, 0.3f), 0.25f), m2));
+
+    scene->add(make_shared<object>(
+        make_shared<rectangle>(vec3(5.0f, 0.0f, -95.0f), vec3(5.0f, 0.0f, 5.0f), vec3(-95.0f, 0.0f, 5.0f)),
+        make_shared<metal>(ct2, 0.3f)));
 
     return scene;
 }
 
 int main(int argc, char *argv[])
 {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+
+    const unsigned int maxrgbvhex = 0x437fffff;
+    const float maxrgbv = *reinterpret_cast<const float *>(&maxrgbvhex);
+#pragma GCC diagnostic pop
+
     random_device rd;
     mt19937 gen(rd());
     uniform_real_distribution<float> dis(0.0f, 1.0f);
@@ -114,14 +119,15 @@ int main(int argc, char *argv[])
 
     auto world = make_scene();
 
-    vec3 lookfrom(4.8f, 3.6f, 1.8f);
-    vec3 lookto(-0.15f, 0.0f, 0.25f);
-    float dist_to_focus = (lookfrom - lookto).length();
+    vec3 lookfrom(3.6f, 1.8f, 4.8f);
+    vec3 lookto(0.0f, 0.25f, -0.15f);
+    vec3 center(0.5f, 0.5f, 0.5f);
+    float dist_to_focus = (lookfrom - center).length();
     float aperture = 0.05f;
 
     camera cam(
         lookfrom, lookto,
-        vec3(0.0f, 0.0f, 1.0f),
+        vec3(0.0f, 1.0f, 0.0f),
         20.0f,
         1.0f * nx / ny,
         aperture,
@@ -143,15 +149,15 @@ int main(int argc, char *argv[])
 
             col /= static_cast<float>(ns);
 
-            *(p++) = static_cast<unsigned char>(255.99f * sqrtf(col[0]));
-            *(p++) = static_cast<unsigned char>(255.99f * sqrtf(col[1]));
-            *(p++) = static_cast<unsigned char>(255.99f * sqrtf(col[2]));
+            *(p++) = static_cast<unsigned char>(maxrgbv * sqrtf(col[0]));
+            *(p++) = static_cast<unsigned char>(maxrgbv * sqrtf(col[1]));
+            *(p++) = static_cast<unsigned char>(maxrgbv * sqrtf(col[2]));
             *(p++) = 255;
         }
         printf("\r%.0f%%", 100.0f * (ny - j - 1) / ny);
     }
 
-    lodepng::encode(argv[1], image.get(), nx, ny);
+    lodepng_encode32_file(argv[1], image.get(), nx, ny);
 
     return 0;
 }

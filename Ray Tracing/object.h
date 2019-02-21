@@ -13,21 +13,13 @@ class object
 
     bool hit(const ray &r, float tmin, float tmax, float &t, hitpoint &hp, shared_ptr<material> &m) const
     {
-        if (!this->s->hit(r, tmin, tmax, t, hp))
+        bool front;
+        if (!this->s->hit(r, tmin, tmax, t, hp, front))
         {
             return false;
         }
 
-        m = nullptr;
-        if (hp.side() == 0)
-        {
-            m = this->m1;
-        }
-        else
-        {
-            m = this->m2;
-        }
-
+        m = front ? this->m1 : this->m2;
         return m != nullptr;
     }
 
