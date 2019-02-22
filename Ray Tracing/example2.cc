@@ -37,10 +37,6 @@ static vec3 color(const ray &r, shared_ptr<scene> world, int depth = 0)
     else
     {
         return vec3(0.0f, 0.0f, 0.0f);
-        vec3 unit_direction = unit_vector(r.direction());
-
-        float t = 0.5f * (unit_direction.y() + 1.0f);
-        return (1.0f - t) * vec3(1.0f, 1.0f, 1.0f) + t * vec3(0.5f, 0.7f, 1.0f);
     }
 }
 
@@ -102,7 +98,6 @@ int main(int argc, char *argv[])
 {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
-
     const unsigned int maxrgbvhex = 0x437fffff;
     const float maxrgbv = *reinterpret_cast<const float *>(&maxrgbvhex);
 #pragma GCC diagnostic pop

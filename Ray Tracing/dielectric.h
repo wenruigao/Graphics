@@ -18,27 +18,12 @@ class dielectric : public material
 
     virtual bool scatter(const ray &r_in, const hitpoint &hp, vec3 &attenuation, ray &scattered) const
     {
-        vec3 outward_normal;
-        vec3 reflected = reflect(r_in.direction(), hp.normal());
-        float ni_over_nt;
         attenuation = vec3(1.0f, 1.0f, 1.0f);
-        vec3 refracted;
-        float cosine;
-        if (dot(r_in.direction(), hp.normal()) > 0)
-        {
-            outward_normal = -hp.normal();
-            ni_over_nt = ref_idx;
-            cosine = ref_idx * dot(r_in.direction(), hp.normal()) / r_in.direction().length();
-        }
-        else
-        {
-            outward_normal = hp.normal();
-            ni_over_nt = 1.0f / ref_idx;
-            cosine = -dot(r_in.direction(), hp.normal()) / r_in.direction().length();
-        }
 
-        if (refract(r_in.direction(), outward_normal, ni_over_nt, refracted))
+        vec3 refracted;
+        if (refract(r_in.direction(), hp.normal(), 1.0f / ref_idx, refracted))
         {
+            float cosine = -dot(r_in.direction(), hp.normal()) / r_in.direction().length();
             float reflect_prob = schlick(cosine, ref_idx);
             if (dis(gen) >= reflect_prob)
             {
@@ -47,6 +32,7 @@ class dielectric : public material
             }
         }
 
+        vec3 reflected = reflect(r_in.direction(), hp.normal());
         scattered = ray(hp.point(), reflected);
         return true;
     }
